@@ -1,19 +1,25 @@
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
-console.log('API_BASE_URL:', API_BASE_URL);
+const BASE_URL = 'http://127.0.0.1:8000/api/core';
 
-export const fetchHealthCheck = async () => {
-  const res = await fetch(`${API_BASE_URL}/core/health/`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-};
+export async function fetchHealthCheck() {
+  const response = await fetch(`${BASE_URL}/health/`);
+  if (!response.ok) throw new Error('Health check failed');
+  return response.json();
+}
 
-// use this instead of calling api.anthropic.com directly
-export const callAnthropicProxy = async (payload) => {
-  const res = await fetch(`${API_BASE_URL}/core/anthropic/`, {
+export async function callAnthropicProxy(payload) {
+  // ✅ Changed from /anthropic/ to /chat/
+  const response = await fetch(`${BASE_URL}/chat/`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error(`Proxy error ${res.status}`);
-  return res.json();
-};
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Backend error: ${errorText}`);
+  }
+
+  return response.json();
+}

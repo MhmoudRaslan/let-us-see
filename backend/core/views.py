@@ -12,19 +12,16 @@ def health_check(request):
 @csrf_exempt
 @api_view(['POST'])
 def gemini_chat(request):
-    """
-    FREE Gemini API endpoint
-    """
+    """FREE Gemini API endpoint"""
     api_key = os.environ.get("GEMINI_API_KEY")
     
     if not api_key:
         return Response(
-            {"error": "GEMINI_API_KEY not set on server"}, 
+            {"error": "GEMINI_API_KEY not set"}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
     
     try:
-        # Get messages from request
         messages = request.data.get('messages', [])
         
         if not messages:
@@ -33,11 +30,10 @@ def gemini_chat(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Get the last user message
         last_message = messages[-1]['content']
         
-        # Call Gemini API
-        gemini_url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={api_key}'
+        # ✅ Using gemini-2.5-flash (latest free model)
+        gemini_url = f'https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={api_key}'
         
         payload = {
             'contents': [{
@@ -56,11 +52,8 @@ def gemini_chat(request):
             )
         
         data = response.json()
-        
-        # Extract the response text
         text = data['candidates'][0]['content']['parts'][0]['text']
         
-        # Return in the same format as Anthropic for compatibility
         return Response({
             'content': [{'text': text}]
         })
@@ -72,6 +65,6 @@ def gemini_chat(request):
         )
     except (KeyError, IndexError) as e:
         return Response(
-            {"error": f"Invalid response format: {str(e)}"}, 
+            {"error": f"Invalid response: {str(e)}"}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

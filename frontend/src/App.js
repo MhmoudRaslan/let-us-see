@@ -47,13 +47,12 @@ export default function AskRaslan() {
     setIsLoading(true);
 
     try {
+      // ✅ Simplified payload for Gemini
       const payload = {
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1024,
         messages: newMessages.map(m => ({ role: m.role, content: m.content })),
       };
 
-      // Call backend proxy instead of api.anthropic.com
+      // Call backend proxy
       const data = await callAnthropicProxy(payload);
 
       if (data.content && data.content[0]) {
@@ -77,7 +76,7 @@ export default function AskRaslan() {
     } catch (error) {
       const errorMessage = {
         role: 'assistant',
-        content: `Error: ${error.message}. Make sure the Claude API is properly configured.`,
+        content: `Error: ${error.message}`,
       };
       setMessages([...newMessages, errorMessage]);
     } finally {
@@ -232,7 +231,7 @@ export default function AskRaslan() {
                   Ask Raslan
                 </h2>
                 <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
-                  Your AI assistant powered by Claude
+                  Your AI assistant powered by Gemini
                 </p>
               </div>
             </div>
