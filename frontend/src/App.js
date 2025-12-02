@@ -1,7 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Moon, Sun, Menu, Plus, Trash2, Copy, Check } from 'lucide-react';
-import { fetchHealthCheck, callAnthropicProxy } from './services/api';
-import './App.css';
 
 export default function AskRaslan() {
   const [messages, setMessages] = useState([]);
@@ -12,7 +10,6 @@ export default function AskRaslan() {
   const [currentConvId, setCurrentConvId] = useState(1);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [copiedIndex, setCopiedIndex] = useState(null);
-  const [status, setStatus] = useState('Loading...');
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -31,12 +28,6 @@ export default function AskRaslan() {
     }
   }, [currentConvId, conversations]);
 
-  useEffect(() => {
-    fetchHealthCheck()
-      .then(data => setStatus(data.status))
-      .catch(err => setStatus('Error: ' + err.message));
-  }, []);
-
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -47,36 +38,45 @@ export default function AskRaslan() {
     setIsLoading(true);
 
     try {
-      // ✅ Simplified payload for Gemini
-      const payload = {
-        messages: newMessages.map(m => ({ role: m.role, content: m.content })),
+      console.log('Sending message to backend...');
+      console.log('URL: http://127.0.0.1:8000/api/core/chat/');
+      const response = await fetch('http://127.0.0.1:8000/api/core/chat/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: newMessages.map(m => ({ role: m.role, content: m.content })),
+        }),
+      });
+
+      const data = await response.json();
+      console.log('Received response:', data);
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      const assistantMessage = {
+        role: 'assistant',
+        content: data.content[0].text,
       };
 
-      // Call backend proxy
-      const data = await callAnthropicProxy(payload);
+      const updatedMessages = [...newMessages, assistantMessage];
+      setMessages(updatedMessages);
 
-      if (data.content && data.content[0]) {
-        const assistantMessage = {
-          role: 'assistant',
-          content: data.content[0].text,
-        };
-
-        const updatedMessages = [...newMessages, assistantMessage];
-        setMessages(updatedMessages);
-
-        // Update conversation
-        setConversations(prev =>
-          prev.map(conv =>
-            conv.id === currentConvId
-              ? { ...conv, messages: updatedMessages, name: conv.name === 'New Chat' ? input.slice(0, 30) + '...' : conv.name }
-              : conv
-          )
-        );
-      }
+      // Update conversation
+      setConversations(prev =>
+        prev.map(conv =>
+          conv.id === currentConvId
+            ? { ...conv, messages: updatedMessages, name: conv.name === 'New Chat' ? input.slice(0, 30) + '...' : conv.name }
+            : conv
+        )
+      );
     } catch (error) {
       const errorMessage = {
         role: 'assistant',
-        content: `Error: ${error.message}`,
+        content: `Error: ${error.message}. Make sure the Claude API is properly configured.`,
       };
       setMessages([...newMessages, errorMessage]);
     } finally {
@@ -142,13 +142,13 @@ export default function AskRaslan() {
     return parts.map((part, i) => {
       if (part.type === 'code') {
         return (
-          <pre key={i} className={`${darkMode ? 'bg-gray-900' : 'bg-gray-100'} p-4 rounded-lg overflow-x-auto my-2`}>
-            <code className="text-sm">{part.content}</code>
+          <pre key={i} className={`${darkMode ? 'bg-gray-900' : 'bg-gray-100'} p-4 rounded-lg overflow-x-auto my-2 max-w-full`}>
+            <code className="text-sm break-all whitespace-pre-wrap">{part.content}</code>
           </pre>
         );
       }
       return (
-        <div key={i} className="whitespace-pre-wrap">
+        <div key={i} className="whitespace-pre-wrap break-words">
           {part.content.split('\n').map((line, j) => (
             <React.Fragment key={j}>
               {line}
@@ -231,7 +231,7 @@ export default function AskRaslan() {
                   Ask Raslan
                 </h2>
                 <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
-                  Your AI assistant powered by Gemini
+                  Your AI assistant powered by Claude
                 </p>
               </div>
             </div>
@@ -244,7 +244,7 @@ export default function AskRaslan() {
                     : darkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'
                 }`}>
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">{renderMessage(msg.content)}</div>
+                    <div className="flex-1 min-w-0 overflow-hidden">{renderMessage(msg.content)}</div>
                     {msg.role === 'assistant' && (
                       <button
                         onClick={() => copyMessage(msg.content, idx)}
