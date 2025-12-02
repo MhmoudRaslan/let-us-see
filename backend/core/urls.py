@@ -3,5 +3,5 @@ from . import views
 
 urlpatterns = [
     path('health/', views.health_check, name='health_check'),
-    path('anthropic/', views.anthropic_proxy, name='anthropic_proxy'),
+    path('chat/', views.gemini_chat, name='gemini_chat'),  # Changed from anthropic
 ]
